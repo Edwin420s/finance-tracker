@@ -1,4 +1,5 @@
 const Goal = require('../models/Goal');
+const Transaction = require('../models/Transaction');
 
 // @desc    Get all goals for user
 // @route   GET /api/goals
@@ -94,13 +95,6 @@ exports.updateGoal = async (req, res, next) => {
       }
     );
 
-    // If currentAmount reaches targetAmount, mark as completed
-    if (goal.currentAmount >= goal.targetAmount && !goal.isCompleted) {
-      goal.isCompleted = true;
-      goal.completedAt = new Date();
-      await goal.save();
-    }
-
     res.status(200).json({
       success: true,
       data: {
@@ -161,7 +155,7 @@ exports.updateGoalProgress = async (req, res, next) => {
 
     goal.currentAmount = amount;
 
-    // If currentAmount reaches targetAmount, mark as completed
+    // Check if goal is completed
     if (goal.currentAmount >= goal.targetAmount && !goal.isCompleted) {
       goal.isCompleted = true;
       goal.completedAt = new Date();
@@ -176,6 +170,55 @@ exports.updateGoalProgress = async (req, res, next) => {
       success: true,
       data: {
         goal
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Add contribution to goal
+// @route   POST /api/goals/:id/contribute
+// @access  Private
+exports.addContribution = async (req, res, next) => {
+  try {
+    const { amount, description } = req.body;
+
+    let goal = await Goal.findOne({
+      _id: req.params.id,
+      userId: req.user.id
+    });
+
+    if (!goal) {
+      return res.status(404).json({
+        success: false,
+        message: 'Goal not found'
+      });
+    }
+
+    // Create contribution record
+    const contribution = {
+      date: new Date(),
+      amount,
+      description: description || 'Manual contribution'
+    };
+
+    goal.currentAmount += amount;
+    goal.contributions.push(contribution);
+
+    // Check if goal is completed
+    if (goal.currentAmount >= goal.targetAmount && !goal.isCompleted) {
+      goal.isCompleted = true;
+      goal.completedAt = new Date();
+    }
+
+    await goal.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        goal,
+        contribution
       }
     });
   } catch (error) {

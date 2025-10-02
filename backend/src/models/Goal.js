@@ -41,6 +41,22 @@ const goalSchema = new mongoose.Schema({
     type: String,
     default: 'target'
   },
+  contributions: [{
+    date: {
+      type: Date,
+      default: Date.now
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: [0.01, 'Contribution amount must be greater than 0']
+    },
+    description: String,
+    transactionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Transaction'
+    }
+  }],
   isCompleted: {
     type: Boolean,
     default: false
@@ -69,6 +85,15 @@ goalSchema.virtual('daysRemaining').get(function() {
 // Method to check if goal is overdue
 goalSchema.methods.isOverdue = function() {
   return !this.isCompleted && new Date() > this.deadline;
+};
+
+// Static method to get active goals
+goalSchema.statics.getActiveGoals = function(userId) {
+  return this.find({
+    userId,
+    isCompleted: false,
+    deadline: { $gte: new Date() }
+  });
 };
 
 const Goal = mongoose.model('Goal', goalSchema);

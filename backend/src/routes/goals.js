@@ -5,7 +5,8 @@ const {
   createGoal,
   updateGoal,
   deleteGoal,
-  updateGoalProgress
+  updateGoalProgress,
+  addContribution
 } = require('../controllers/goalController');
 const { auth } = require('../middleware/auth');
 
@@ -24,5 +25,8 @@ router.route('/:id')
 
 router.route('/:id/progress')
   .put(updateGoalProgress);
+
+router.route('/:id/contribute')
+  .post(addContribution);
 
 module.exports = router;
