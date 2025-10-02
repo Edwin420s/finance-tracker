@@ -4,7 +4,8 @@ const {
   getBudget,
   createBudget,
   updateBudget,
-  deleteBudget
+  deleteBudget,
+  getBudgetAlerts
 } = require('../controllers/budgetController');
 const { auth } = require('../middleware/auth');
 
@@ -15,6 +16,9 @@ router.use(auth);
 router.route('/')
   .get(getBudgets)
   .post(createBudget);
+
+router.route('/alerts')
+  .get(getBudgetAlerts);
 
 router.route('/:id')
   .get(getBudget)

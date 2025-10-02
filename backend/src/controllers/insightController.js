@@ -1,5 +1,6 @@
 const axios = require('axios');
 const Transaction = require('../models/Transaction');
+const Budget = require('../models/Budget');
 
 // @desc    Get AI insights
 // @route   GET /api/insights
@@ -37,29 +38,32 @@ exports.getInsights = async (req, res, next) => {
       description: t.description
     }));
 
-    // Call AI service
-    const aiResponse = await axios.post(
-      `${process.env.AI_SERVICE_URL}/api/insights/generate`,
-      {
-        transactions: transactionData,
-        user_id: req.user.id,
-        timeframe: '90d'
-      }
-    );
+    try {
+      // Call AI service
+      const aiResponse = await axios.post(
+        `${process.env.AI_SERVICE_URL}/api/insights/generate`,
+        {
+          transactions: transactionData,
+          user_id: req.user.id,
+          timeframe: '90d'
+        }
+      );
 
-    res.status(200).json({
-      success: true,
-      data: aiResponse.data
-    });
+      res.status(200).json({
+        success: true,
+        data: aiResponse.data
+      });
+    } catch (aiError) {
+      console.error('AI service error:', aiError);
+      // Fallback to basic insights if AI service is down
+      const basicInsights = await generateBasicInsights(req.user.id);
+      res.status(200).json({
+        success: true,
+        data: basicInsights
+      });
+    }
   } catch (error) {
-    console.error('Error getting insights:', error);
-    
-    // If AI service is down, return basic insights
-    const basicInsights = await generateBasicInsights(req.user.id);
-    res.status(200).json({
-      success: true,
-      data: basicInsights
-    });
+    next(error);
   }
 };
 
@@ -91,25 +95,29 @@ exports.getForecast = async (req, res, next) => {
       category: t.category
     }));
 
-    // Call AI service for forecasting
-    const aiResponse = await axios.post(
-      `${process.env.AI_SERVICE_URL}/api/forecast/spending`,
-      {
-        historical_data: historicalData,
-        periods: 30 // Forecast next 30 days
-      }
-    );
+    try {
+      // Call AI service for forecasting
+      const aiResponse = await axios.post(
+        `${process.env.AI_SERVICE_URL}/api/forecast/spending`,
+        {
+          historical_data: historicalData,
+          periods: 30
+        }
+      );
 
-    res.status(200).json({
-      success: true,
-      data: aiResponse.data
-    });
+      res.status(200).json({
+        success: true,
+        data: aiResponse.data
+      });
+    } catch (aiError) {
+      console.error('AI service error:', aiError);
+      res.status(500).json({
+        success: false,
+        message: 'Forecasting service temporarily unavailable'
+      });
+    }
   } catch (error) {
-    console.error('Error getting forecast:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error generating forecast'
-    });
+    next(error);
   }
 };
 
@@ -159,6 +167,28 @@ async function generateBasicInsights(userId) {
       message: `Your highest spending is in ${topCategory}.`,
       confidence: 0.9,
       data: { category: topCategory, amount: categorySpending[topCategory] }
+    });
+  }
+
+  // Compare with previous month
+  const prevStartDate = new Date(startDate);
+  prevStartDate.setMonth(prevStartDate.getMonth() - 1);
+  const prevTransactions = await Transaction.find({
+    userId,
+    date: { $gte: prevStartDate, $lt: startDate }
+  });
+
+  const prevExpenses = prevTransactions.filter(t => t.type === 'expense');
+  const prevTotalExpenses = prevExpenses.reduce((sum, t) => sum + t.amount, 0);
+
+  if (prevTotalExpenses > 0) {
+    const change = ((totalExpenses - prevTotalExpenses) / prevTotalExpenses) * 100;
+    insights.push({
+      type: 'spending_trend',
+      title: 'Spending Trend',
+      message: `Your spending is ${change >= 0 ? 'up' : 'down'} ${Math.abs(change).toFixed(1)}% from last month.`,
+      confidence: 0.7,
+      data: { change }
     });
   }
 

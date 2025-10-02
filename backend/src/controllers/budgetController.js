@@ -1,7 +1,7 @@
 const Budget = require('../models/Budget');
 const Transaction = require('../models/Transaction');
 
-// @desc    Get all budgets for a user
+// @desc    Get all budgets for user
 // @route   GET /api/budgets
 // @access  Private
 exports.getBudgets = async (req, res, next) => {
@@ -11,9 +11,8 @@ exports.getBudgets = async (req, res, next) => {
     // Calculate current spending for each budget
     const budgetsWithSpending = await Promise.all(
       budgets.map(async (budget) => {
-        const now = new Date();
-        const startOfPeriod = getStartOfPeriod(budget.period, now);
-        const endOfPeriod = getEndOfPeriod(budget.period, now);
+        const startDate = getPeriodStartDate(budget.period);
+        const endDate = getPeriodEndDate(budget.period);
 
         const spending = await Transaction.aggregate([
           {
@@ -21,7 +20,7 @@ exports.getBudgets = async (req, res, next) => {
               userId: req.user.id,
               type: 'expense',
               category: budget.category,
-              date: { $gte: startOfPeriod, $lte: endOfPeriod },
+              date: { $gte: startDate, $lte: endDate },
               isExcluded: { $ne: true }
             }
           },
@@ -34,9 +33,13 @@ exports.getBudgets = async (req, res, next) => {
         ]);
 
         const spent = spending.length > 0 ? spending[0].total : 0;
-        budget.spent = spent;
+        const updatedBudget = await Budget.findByIdAndUpdate(
+          budget._id,
+          { spent },
+          { new: true }
+        );
 
-        return budget;
+        return updatedBudget;
       })
     );
 
@@ -69,32 +72,6 @@ exports.getBudget = async (req, res, next) => {
       });
     }
 
-    // Calculate current spending for the budget
-    const now = new Date();
-    const startOfPeriod = getStartOfPeriod(budget.period, now);
-    const endOfPeriod = getEndOfPeriod(budget.period, now);
-
-    const spending = await Transaction.aggregate([
-      {
-        $match: {
-          userId: req.user.id,
-          type: 'expense',
-          category: budget.category,
-          date: { $gte: startOfPeriod, $lte: endOfPeriod },
-          isExcluded: { $ne: true }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: '$amount' }
-        }
-      }
-    ]);
-
-    const spent = spending.length > 0 ? spending[0].total : 0;
-    budget.spent = spent;
-
     res.status(200).json({
       success: true,
       data: {
@@ -116,9 +93,8 @@ exports.createBudget = async (req, res, next) => {
 
     // Set start and end dates based on period
     const { period } = req.body;
-    const now = new Date();
-    req.body.startDate = getStartOfPeriod(period, now);
-    req.body.endDate = getEndOfPeriod(period, now);
+    req.body.startDate = getPeriodStartDate(period);
+    req.body.endDate = getPeriodEndDate(period);
 
     const budget = await Budget.create(req.body);
 
@@ -150,17 +126,20 @@ exports.updateBudget = async (req, res, next) => {
       });
     }
 
-    // If period is being updated, adjust start and end dates
+    // If period is changed, update dates
     if (req.body.period && req.body.period !== budget.period) {
-      const now = new Date();
-      req.body.startDate = getStartOfPeriod(req.body.period, now);
-      req.body.endDate = getEndOfPeriod(req.body.period, now);
+      req.body.startDate = getPeriodStartDate(req.body.period);
+      req.body.endDate = getPeriodEndDate(req.body.period);
     }
 
-    budget = await Budget.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    });
+    budget = await Budget.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
 
     res.status(200).json({
       success: true,
@@ -201,41 +180,102 @@ exports.deleteBudget = async (req, res, next) => {
   }
 };
 
-// Helper functions to calculate period start and end dates
-function getStartOfPeriod(period, date) {
-  const start = new Date(date);
+// @desc    Get budget alerts
+// @route   GET /api/budgets/alerts
+// @access  Private
+exports.getBudgetAlerts = async (req, res, next) => {
+  try {
+    const budgets = await Budget.find({ userId: req.user.id });
+    const alerts = [];
+
+    for (const budget of budgets) {
+      const percentageUsed = (budget.spent / budget.amount) * 100;
+      
+      if (percentageUsed >= 100) {
+        alerts.push({
+          type: 'exceeded',
+          budgetId: budget._id,
+          budgetName: budget.name,
+          category: budget.category,
+          spent: budget.spent,
+          limit: budget.amount,
+          message: `Budget exceeded for ${budget.category}. Spent $${budget.spent} of $${budget.amount}`
+        });
+      } else if (percentageUsed >= 90) {
+        alerts.push({
+          type: 'critical',
+          budgetId: budget._id,
+          budgetName: budget.name,
+          category: budget.category,
+          spent: budget.spent,
+          limit: budget.amount,
+          percentage: percentageUsed,
+          message: `Budget critical for ${budget.category}. ${percentageUsed.toFixed(1)}% used`
+        });
+      } else if (percentageUsed >= 70) {
+        alerts.push({
+          type: 'warning',
+          budgetId: budget._id,
+          budgetName: budget.name,
+          category: budget.category,
+          spent: budget.spent,
+          limit: budget.amount,
+          percentage: percentageUsed,
+          message: `Budget warning for ${budget.category}. ${percentageUsed.toFixed(1)}% used`
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        alerts
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Helper functions for period calculations
+function getPeriodStartDate(period) {
+  const now = new Date();
+  
   switch (period) {
     case 'weekly':
-      start.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
-      break;
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      return startOfWeek;
+      
     case 'monthly':
-      start.setDate(1); // Start of month
-      break;
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+      
     case 'yearly':
-      start.setMonth(0, 1); // Start of year
-      break;
+      return new Date(now.getFullYear(), 0, 1);
+      
     default:
-      throw new Error('Invalid period');
+      return new Date(now.getFullYear(), now.getMonth(), 1);
   }
-  start.setHours(0, 0, 0, 0);
-  return start;
 }
 
-function getEndOfPeriod(period, date) {
-  const end = new Date(date);
+function getPeriodEndDate(period) {
+  const now = new Date();
+  
   switch (period) {
     case 'weekly':
-      end.setDate(date.getDate() + (6 - date.getDay())); // End of week (Saturday)
-      break;
+      const endOfWeek = new Date(now);
+      endOfWeek.setDate(now.getDate() + (6 - now.getDay()));
+      endOfWeek.setHours(23, 59, 59, 999);
+      return endOfWeek;
+      
     case 'monthly':
-      end.setMonth(date.getMonth() + 1, 0); // Last day of the month
-      break;
+      return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      
     case 'yearly':
-      end.setMonth(11, 31); // Last day of the year
-      break;
+      return new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+      
     default:
-      throw new Error('Invalid period');
+      return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
   }
-  end.setHours(23, 59, 59, 999);
-  return end;
 }
