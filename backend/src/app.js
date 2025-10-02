@@ -3,13 +3,13 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const authRoutes = require('./src/routes/auth');
-const transactionRoutes = require('./src/routes/transactions');
-const budgetRoutes = require('./src/routes/budgets');
-const insightRoutes = require('./src/routes/insights');
-const userRoutes = require('./src/routes/users');
-const reportRoutes = require('./src/routes/reports');
-const notificationRoutes = require('./src/routes/notifications');
+const authRoutes = require('./routes/auth');
+const transactionRoutes = require('./routes/transactions');
+const budgetRoutes = require('./routes/budgets');
+const insightRoutes = require('./routes/insights');
+const userRoutes = require('./routes/users');
+const reportRoutes = require('./routes/reports');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
