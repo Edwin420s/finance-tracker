@@ -1,7 +1,7 @@
 {
   "name": "finance-tracker-frontend",
   "version": "1.0.0",
-  "description": "Frontend for the Finance Tracker",
+  "description": "Frontend for Finance Tracker with AI Insights",
   "main": "index.js",
   "scripts": {
     "start": "react-scripts start",
@@ -19,7 +19,10 @@
     "recharts": "^2.5.0",
     "framer-motion": "^8.5.0",
     "react-hook-form": "^7.43.1",
-    "react-hot-toast": "^2.4.0"
+    "react-hot-toast": "^2.4.0",
+    "date-fns": "^2.29.3",
+    "clsx": "^1.2.1",
+    "lucide-react": "^0.294.0"
   },
   "devDependencies": {
     "tailwindcss": "^3.2.7",

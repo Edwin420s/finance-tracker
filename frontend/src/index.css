@@ -1,17 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-primary-dark text-text-primary;
+  }
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+@layer components {
+  .btn-primary {
+    @apply bg-accent-primary hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-primary-dark;
+  }
+  
+  .btn-secondary {
+    @apply bg-primary-medium hover:bg-primary-light text-text-primary font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-primary-dark;
+  }
+  
+  .input-primary {
+    @apply bg-primary-light border border-border-color text-text-primary rounded-lg focus:ring-2 focus:ring-accent-primary focus:border-accent-primary block w-full p-2.5 placeholder-text-muted;
+  }
+  
+  .card {
+    @apply bg-primary-medium rounded-xl border border-border-color p-6 shadow-lg;
+  }
+  
+  .glass {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-primary-dark;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary-light rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-accent-primary;
+}
+
+/* Loading animation */
+.loading-spinner {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Chart container styles */
+.chart-container {
+  @apply bg-primary-medium rounded-xl p-4 border border-border-color;
+}
+
+/* Progress bar styles */
+.progress-bar {
+  @apply w-full bg-primary-light rounded-full h-2;
+}
+
+.progress-bar-fill {
+  @apply h-2 rounded-full transition-all duration-300;
+}
+
+.progress-bar-good {
+  @apply bg-accent-success;
+}
+
+.progress-bar-warning {
+  @apply bg-accent-warning;
+}
+
+.progress-bar-critical {
+  @apply bg-accent-error;
 }

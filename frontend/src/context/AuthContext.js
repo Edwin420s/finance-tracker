@@ -14,54 +14,76 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(localStorage.getItem('token'));
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     if (token) {
-      // Validate token and get user info
-      authAPI.getProfile(token)
-        .then(response => {
-          setUser(response.data.user);
-        })
-        .catch(error => {
-          console.error('Error getting profile', error);
-          localStorage.removeItem('token');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+      getCurrentUser();
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
+
+  const getCurrentUser = async () => {
+    try {
+      const response = await authAPI.getMe();
+      setUser(response.data.data.user);
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      logout();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const login = async (email, password) => {
-    const response = await authAPI.login(email, password);
-    const { token, user } = response.data;
-    localStorage.setItem('token', token);
-    setUser(user);
-    return response;
+    try {
+      const response = await authAPI.login(email, password);
+      const { token, data } = response.data;
+      
+      localStorage.setItem('token', token);
+      setToken(token);
+      setUser(data.user);
+      
+      return response;
+    } catch (error) {
+      throw error;
+    }
   };
 
   const register = async (userData) => {
-    const response = await authAPI.register(userData);
-    const { token, user } = response.data;
-    localStorage.setItem('token', token);
-    setUser(user);
-    return response;
+    try {
+      const response = await authAPI.register(userData);
+      const { token, data } = response.data;
+      
+      localStorage.setItem('token', token);
+      setToken(token);
+      setUser(data.user);
+      
+      return response;
+    } catch (error) {
+      throw error;
+    }
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    setToken(null);
     setUser(null);
+  };
+
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
   };
 
   const value = {
     user,
+    token,
+    loading,
     login,
     register,
     logout,
-    loading,
+    updateUser,
   };
 
   return (
