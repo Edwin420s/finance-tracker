@@ -5,12 +5,12 @@ const router = express.Router();
 
 router.use(auth);
 
-// Placeholder for future user routes
-router.get('/profile', (req, res) => {
+// Placeholder for future notification routes
+router.get('/', (req, res) => {
   res.status(200).json({
     success: true,
     data: {
-      user: req.user
+      notifications: []
     }
   });
 });

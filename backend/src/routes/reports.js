@@ -1,7 +1,7 @@
 const express = require('express');
 const {
-  getSummaryReport,
-  exportTransactions
+  getReports,
+  exportReports
 } = require('../controllers/reportController');
 const { auth } = require('../middleware/auth');
 
@@ -9,10 +9,10 @@ const router = express.Router();
 
 router.use(auth);
 
-router.route('/summary')
-  .get(getSummaryReport);
+router.route('/')
+  .get(getReports);
 
 router.route('/export')
-  .get(exportTransactions);
+  .post(exportReports);
 
 module.exports = router;

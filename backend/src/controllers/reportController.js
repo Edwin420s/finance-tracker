@@ -1,59 +1,143 @@
 const Transaction = require('../models/Transaction');
 const Budget = require('../models/Budget');
 
-// @desc    Generate financial report
-// @route   GET /api/reports/summary
+// @desc    Get financial reports
+// @route   GET /api/reports
 // @access  Private
-exports.getFinancialSummary = async (req, res, next) => {
+exports.getReports = async (req, res, next) => {
   try {
-    const { startDate, endDate, groupBy = 'month' } = req.query;
+    const { startDate, endDate, reportType = 'monthly' } = req.query;
 
-    // Set default date range (last 12 months)
-    const defaultEndDate = new Date();
-    const defaultStartDate = new Date();
-    defaultStartDate.setFullYear(defaultStartDate.getFullYear() - 1);
+    // Set default date range if not provided
+    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const end = endDate ? new Date(endDate) : new Date();
 
-    const dateFilter = {
-      date: {
-        $gte: startDate ? new Date(startDate) : defaultStartDate,
-        $lte: endDate ? new Date(endDate) : defaultEndDate
-      }
+    const matchStage = {
+      userId: req.user.id,
+      date: { $gte: start, $lte: end },
+      isExcluded: { $ne: true }
     };
 
-    // Get transactions in the date range
-    const transactions = await Transaction.find({
-      userId: req.user.id,
-      ...dateFilter
-    });
+    // Get basic financial summary
+    const summary = await Transaction.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: '$type',
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
 
-    // Group transactions by time period and type
-    const groupedData = groupTransactions(transactions, groupBy);
-
-    // Calculate summary statistics
-    const totalIncome = transactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalExpenses = transactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const netSavings = totalIncome - totalExpenses;
+    const income = summary.find(s => s._id === 'income') || { total: 0, count: 0 };
+    const expenses = summary.find(s => s._id === 'expense') || { total: 0, count: 0 };
+    const netSavings = income.total - expenses.total;
 
     // Get category breakdown
-    const categoryBreakdown = getCategoryBreakdown(transactions);
+    const categoryBreakdown = await Transaction.aggregate([
+      { 
+        $match: { 
+          ...matchStage,
+          type: 'expense'
+        } 
+      },
+      {
+        $group: {
+          _id: '$category',
+          total: { $sum: '$amount' }
+        }
+      },
+      { $sort: { total: -1 } }
+    ]);
+
+    // Calculate percentages
+    const totalExpenses = expenses.total;
+    const categoryBreakdownWithPercentages = categoryBreakdown.map(cat => ({
+      name: cat._id,
+      amount: cat.total,
+      percentage: totalExpenses > 0 ? (cat.total / totalExpenses) * 100 : 0
+    }));
+
+    // Get monthly trends (last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const monthlyTrends = await Transaction.aggregate([
+      {
+        $match: {
+          userId: req.user.id,
+          date: { $gte: sixMonthsAgo, $lte: new Date() },
+          isExcluded: { $ne: true }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$date' },
+            month: { $month: '$date' },
+            type: '$type'
+          },
+          total: { $sum: '$amount' }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: '$_id.year',
+            month: '$_id.month'
+          },
+          income: {
+            $sum: {
+              $cond: [{ $eq: ['$_id.type', 'income'] }, '$total', 0]
+            }
+          },
+          expenses: {
+            $sum: {
+              $cond: [{ $eq: ['$_id.type', 'expense'] }, '$total', 0]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          month: {
+            $dateToString: {
+              format: '%Y-%m',
+              date: {
+                $dateFromParts: {
+                  year: '$_id.year',
+                  month: '$_id.month',
+                  day: 1
+                }
+              }
+            }
+          },
+          income: 1,
+          expenses: 1,
+          savings: { $subtract: ['$income', '$expenses'] },
+          savingsRate: {
+            $cond: [
+              { $gt: ['$income', 0] },
+              { $multiply: [{ $divide: [{ $subtract: ['$income', '$expenses'] }, '$income'] }, 100] },
+              0
+            ]
+          }
+        }
+      },
+      { $sort: { month: 1 } }
+    ]);
 
     res.status(200).json({
       success: true,
       data: {
-        summary: {
-          totalIncome,
-          totalExpenses,
-          netSavings,
-          transactionCount: transactions.length
-        },
-        trends: groupedData,
-        categoryBreakdown
+        totalIncome: income.total,
+        totalExpenses: expenses.total,
+        netSavings,
+        transactionCount: income.count + expenses.count,
+        categoryBreakdown: categoryBreakdownWithPercentages,
+        monthlyTrends
       }
     });
   } catch (error) {
@@ -61,97 +145,50 @@ exports.getFinancialSummary = async (req, res, next) => {
   }
 };
 
-// @desc    Export report as CSV
-// @route   GET /api/reports/export
+// @desc    Export reports
+// @route   POST /api/reports/export
 // @access  Private
-exports.exportReport = async (req, res, next) => {
+exports.exportReports = async (req, res, next) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { format = 'csv', startDate, endDate } = req.body;
 
-    const dateFilter = {};
-    if (startDate) dateFilter.date.$gte = new Date(startDate);
-    if (endDate) dateFilter.date.$lte = new Date(endDate);
+    // Set default date range if not provided
+    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const end = endDate ? new Date(endDate) : new Date();
 
     const transactions = await Transaction.find({
       userId: req.user.id,
-      ...dateFilter
+      date: { $gte: start, $lte: end },
+      isExcluded: { $ne: true }
     }).sort({ date: -1 });
 
-    // Convert to CSV
-    const csv = convertToCSV(transactions);
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=transactions.csv');
-    res.status(200).send(csv);
+    if (format === 'csv') {
+      // Generate CSV
+      const headers = 'Date,Description,Category,Type,Amount,Currency\n';
+      const csvData = transactions.map(t => 
+        `"${t.date.toISOString().split('T')[0]}","${t.description || ''}","${t.category}","${t.type}","${t.amount}","${t.currency}"`
+      ).join('\n');
+      
+      const csv = headers + csvData;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=transactions-${new Date().toISOString().split('T')[0]}.csv`);
+      res.send(csv);
+    } else if (format === 'pdf') {
+      // For PDF, we would use a PDF generation library like pdfkit
+      // This is a simplified version
+      res.status(200).json({
+        success: true,
+        message: 'PDF export feature coming soon',
+        data: { transactions }
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Unsupported export format'
+      });
+    }
   } catch (error) {
     next(error);
   }
 };
-
-// Helper function to group transactions by time period
-function groupTransactions(transactions, groupBy) {
-  const groups = {};
-
-  transactions.forEach(transaction => {
-    let key;
-    const date = new Date(transaction.date);
-
-    switch (groupBy) {
-      case 'day':
-        key = date.toISOString().split('T')[0];
-        break;
-      case 'week':
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay());
-        key = weekStart.toISOString().split('T')[0];
-        break;
-      case 'month':
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        break;
-      case 'year':
-        key = date.getFullYear().toString();
-        break;
-      default:
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    }
-
-    if (!groups[key]) {
-      groups[key] = { income: 0, expense: 0 };
-    }
-
-    groups[key][transaction.type] += transaction.amount;
-  });
-
-  return groups;
-}
-
-// Helper function to get category breakdown
-function getCategoryBreakdown(transactions) {
-  const breakdown = {};
-
-  transactions.forEach(transaction => {
-    if (transaction.type === 'expense') {
-      if (!breakdown[transaction.category]) {
-        breakdown[transaction.category] = 0;
-      }
-      breakdown[transaction.category] += transaction.amount;
-    }
-  });
-
-  return breakdown;
-}
-
-// Helper function to convert transactions to CSV
-function convertToCSV(transactions) {
-  const headers = ['Date', 'Type', 'Category', 'Amount', 'Description', 'Merchant'];
-  const rows = transactions.map(t => [
-    t.date.toISOString().split('T')[0],
-    t.type,
-    t.category,
-    t.amount,
-    t.description || '',
-    t.merchant || ''
-  ]);
-
-  return [headers, ...rows].map(row => row.join(',')).join('\n');
-}
