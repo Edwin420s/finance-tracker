@@ -24,4 +24,8 @@ export const goalsAPI = {
   updateGoalProgress: (id, amount) => {
     return api.put(`/goals/${id}/progress`, { amount });
   },
+  
+  addContribution: (id, contributionData) => {
+    return api.post(`/goals/${id}/contribute`, contributionData);
+  },
 };

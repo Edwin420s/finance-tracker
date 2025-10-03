@@ -17,11 +17,14 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
 
   useEffect(() => {
-    if (token) {
-      getCurrentUser();
-    } else {
-      setLoading(false);
-    }
+    const initializeAuth = async () => {
+      if (token) {
+        await getCurrentUser();
+      } else {
+        setLoading(false);
+      }
+    };
+    initializeAuth();
   }, [token]);
 
   const getCurrentUser = async () => {

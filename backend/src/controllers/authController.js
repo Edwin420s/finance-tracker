@@ -66,7 +66,7 @@ exports.login = async (req, res, next) => {
     }
 
     // Check password
-    const isMatch = await user.correctPassword(password, user.password);
+    const isMatch = await user.correctPassword(password);
     if (!isMatch) {
       await user.incrementLoginAttempts();
       return res.status(401).json({
@@ -143,7 +143,7 @@ exports.updatePassword = async (req, res, next) => {
     const user = await User.findById(req.user.id).select('+password');
 
     // Check current password
-    const isMatch = await user.correctPassword(req.body.currentPassword, user.password);
+    const isMatch = await user.correctPassword(req.body.currentPassword);
     if (!isMatch) {
       return res.status(401).json({
         success: false,

@@ -94,8 +94,8 @@ userSchema.pre('save', async function(next) {
 });
 
 // Method to check password
-userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
-  return await bcrypt.compare(candidatePassword, userPassword);
+userSchema.methods.correctPassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Check if account is locked
@@ -103,11 +103,20 @@ userSchema.methods.isLocked = function() {
   return !!(this.security.lockUntil && this.security.lockUntil > Date.now());
 };
 
+// Check if password was changed after token was issued
+userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
+  if (this.passwordChangedAt) {
+    const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+    return JWTTimestamp < changedTimestamp;
+  }
+  return false;
+};
+
 // Increment login attempts
 userSchema.methods.incrementLoginAttempts = async function() {
   // If we have a previous lock that has expired, restart at 1
   if (this.security.lockUntil && this.security.lockUntil < Date.now()) {
-    return await this.updateOne({
+    return this.updateOne({
       'security.loginAttempts': 1,
       'security.lockUntil': undefined
     });
@@ -121,7 +130,7 @@ userSchema.methods.incrementLoginAttempts = async function() {
     updates.$set = { 'security.lockUntil': Date.now() + 2 * 60 * 60 * 1000 }; // 2 hours
   }
   
-  return await this.updateOne(updates);
+  return this.updateOne(updates);
 };
 
 const User = mongoose.model('User', userSchema);
