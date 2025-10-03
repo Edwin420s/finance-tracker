@@ -50,83 +50,82 @@ npm install
 cp .env.example .env
 # Edit .env with your configuration
 npm run dev
+```
 
-Frontend Setup
-bash
+### Frontend Setup
+```bash
 cd frontend
 npm install
 cp .env.example .env
 npm start
-AI Service Setup
-bash
+```
+
+### AI Service Setup
+```bash
 cd ai-service
 pip install -r requirements.txt
 python main.py
-Docker Setup (Alternative)
-bash
+```
+
+### Docker Setup (Alternative)
+```bash
 docker-compose up -d
-🗄 Database Schema
+```
+
+## 🗄 Database Schema
+
 The application uses MongoDB with the following main collections:
 
-Users: User accounts and preferences
+- **Users**: User accounts and preferences
+- **Transactions**: Income and expense records
+- **Budgets**: Budget definitions and tracking
+- **Goals**: Financial goals and progress
+- **Insights**: AI-generated financial insights
+- **Notifications**: User notifications and alerts
+- **Categories**: Transaction categorization system
 
-Transactions: Income and expense records
+## 🔐 API Documentation
 
-Budgets: Budget definitions and tracking
+### Authentication Endpoints
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user
+- `PUT /api/auth/updatepassword` - Update password
 
-Goals: Financial goals and progress
+### Transaction Endpoints
+- `GET /api/transactions` - Get transactions with filtering
+- `POST /api/transactions` - Create new transaction
+- `PUT /api/transactions/:id` - Update transaction
+- `DELETE /api/transactions/:id` - Delete transaction
 
-Insights: AI-generated financial insights
+### Budget Endpoints
+- `GET /api/budgets` - Get user budgets
+- `POST /api/budgets` - Create budget
+- `PUT /api/budgets/:id` - Update budget
+- `GET /api/budgets/alerts` - Get budget alerts
 
-Notifications: User notifications and alerts
+### Insight Endpoints
+- `GET /api/insights` - Get AI insights
+- `GET /api/insights/forecast` - Get spending forecast
 
-Categories: Transaction categorization system
+## 🧪 Testing
 
-🔐 API Documentation
-Authentication Endpoints
-POST /api/auth/register - User registration
-
-POST /api/auth/login - User login
-
-GET /api/auth/me - Get current user
-
-PUT /api/auth/updatepassword - Update password
-
-Transaction Endpoints
-GET /api/transactions - Get transactions with filtering
-
-POST /api/transactions - Create new transaction
-
-PUT /api/transactions/:id - Update transaction
-
-DELETE /api/transactions/:id - Delete transaction
-
-Budget Endpoints
-GET /api/budgets - Get user budgets
-
-POST /api/budgets - Create budget
-
-PUT /api/budgets/:id - Update budget
-
-GET /api/budgets/alerts - Get budget alerts
-
-Insight Endpoints
-GET /api/insights - Get AI insights
-
-GET /api/insights/forecast - Get spending forecast
-
-🧪 Testing
-Backend Tests
-bash
+### Backend Tests
+```bash
 cd backend
 npm test
-Frontend Tests
-bash
+```
+
+### Frontend Tests
+```bash
 cd frontend
 npm test
-🚀 Deployment
-Production Build
-bash
+```
+
+## 🚀 Deployment
+
+### Production Build
+```bash
 # Backend
 cd backend
 npm run build
@@ -134,67 +133,64 @@ npm run build
 # Frontend
 cd frontend
 npm run build
-Environment Variables
+```
+
+### Environment Variables
 Set the following environment variables in production:
 
-Backend (.env)
-
-env
+**Backend (.env)**
+```
 NODE_ENV=production
 MONGODB_URI=your_production_mongodb_uri
 JWT_SECRET=your_secure_jwt_secret
-Frontend (.env.production)
+```
 
-env
+**Frontend (.env.production)**
+```
 REACT_APP_API_URL=your_production_api_url
-🤝 Contributing
-Fork the repository
+```
 
-Create a feature branch (git checkout -b feature/amazing-feature)
+## 🤝 Contributing
 
-Commit your changes (git commit -m 'Add some amazing feature')
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Push to the branch (git push origin feature/amazing-feature)
+## 📄 License
 
-Open a Pull Request
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 🆘 Support
 
-🆘 Support
 For support and questions:
 
-Create an issue in the repository
+- Create an issue in the repository
+- Check the documentation
+- Contact the development team
 
-Check the documentation
+## 🗺 Roadmap
 
-Contact the development team
+- Mobile app development
+- Investment tracking integration
+- Multi-currency support
+- Bank synchronization
+- Advanced AI forecasting
+- Tax preparation features
 
-🗺 Roadmap
-Mobile app development
-
-Investment tracking integration
-
-Multi-currency support
-
-Bank synchronization
-
-Advanced AI forecasting
-
-Tax preparation features
-
-text
+---
 
 This completes the comprehensive Finance Tracker application with ALL necessary files, including:
 
-✅ **Complete Backend** with all models, controllers, services, and utilities
-✅ **Complete Frontend** with all components, pages, hooks, and utilities
-✅ **AI Service** with machine learning capabilities
-✅ **Comprehensive Testing** with test suites
-✅ **Configuration Files** for all environments
-✅ **Documentation** with setup and usage instructions
-✅ **Security** with proper validation and authentication
-✅ **Error Handling** throughout the application
-✅ **Performance** with caching and optimization
+✅ **Complete Backend** with all models, controllers, services, and utilities  
+✅ **Complete Frontend** with all components, pages, hooks, and utilities  
+✅ **AI Service** with machine learning capabilities  
+✅ **Comprehensive Testing** with test suites  
+✅ **Configuration Files** for all environments  
+✅ **Documentation** with setup and usage instructions  
+✅ **Security** with proper validation and authentication  
+✅ **Error Handling** throughout the application  
+✅ **Performance** with caching and optimization  
 
 The application is now truly complete and ready for production deployment!
