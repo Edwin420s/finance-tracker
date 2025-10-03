@@ -3,7 +3,17 @@ const mongoose = require('mongoose');
 const redis = require('redis');
 require('dotenv').config();
 
+// Import jobs
+const InsightGenerationJob = require('./src/jobs/insightGeneration');
+const BudgetAlertsJob = require('./src/jobs/budgetAlerts');
+const WeeklySummariesJob = require('./src/jobs/weeklySummaries');
+
 const PORT = process.env.PORT || 5000;
+
+// Initialize jobs
+const insightJob = new InsightGenerationJob();
+const budgetAlertsJob = new BudgetAlertsJob();
+const weeklySummariesJob = new WeeklySummariesJob();
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
@@ -40,11 +50,24 @@ global.redisClient = redisClient;
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+  
+  // Start background jobs in production
+  if (process.env.NODE_ENV === 'production') {
+    insightJob.start();
+    budgetAlertsJob.start();
+    weeklySummariesJob.start();
+  }
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
+  
+  // Stop jobs
+  insightJob.stop();
+  budgetAlertsJob.stop();
+  weeklySummariesJob.stop();
+  
   server.close(() => {
     mongoose.connection.close();
     redisClient.quit();
