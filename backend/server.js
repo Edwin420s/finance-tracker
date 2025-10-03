@@ -40,7 +40,6 @@ redisClient.on('error', (err) => {
 redisClient.on('connect', () => {
   console.log('✅ Connected to Redis');
 });
-
 redisClient.connect();
 
 // Make redisClient available globally
@@ -51,8 +50,8 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   
-  // Start background jobs in production
-  if (process.env.NODE_ENV === 'production') {
+  // Start background jobs in production, or in development when explicitly enabled
+  if (process.env.NODE_ENV === 'production' || process.env.START_JOBS_IN_DEV === 'true') {
     insightJob.start();
     budgetAlertsJob.start();
     weeklySummariesJob.start();
@@ -62,12 +61,12 @@ const server = app.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
-  
+
   // Stop jobs
   insightJob.stop();
   budgetAlertsJob.stop();
   weeklySummariesJob.stop();
-  
+
   server.close(() => {
     mongoose.connection.close();
     redisClient.quit();
