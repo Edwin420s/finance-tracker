@@ -40,4 +40,4 @@ db.categories.insertMany([
   { name: 'Other Income', type: 'income', isSystem: true, color: '#84cc16', icon: 'more-horizontal' }
 ]);
 
-print('✅ Finance Tracker database initialized successfully!');
+print(' Finance Tracker database initialized successfully!');
