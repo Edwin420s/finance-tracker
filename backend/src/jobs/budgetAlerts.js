@@ -15,19 +15,19 @@ class BudgetAlertsJob {
     });
 
     this.job.start();
-    console.log('💰 Budget alerts job started');
+    console.log(' Budget alerts job started');
   }
 
   stop() {
     if (this.job) {
       this.job.stop();
-      console.log('💰 Budget alerts job stopped');
+      console.log(' Budget alerts job stopped');
     }
   }
 
   async checkBudgetAlerts() {
     try {
-      console.log('💰 Checking budget alerts...');
+      console.log(' Checking budget alerts...');
       
       const budgets = await Budget.find({}).populate('userId');
       let alertCount = 0;
@@ -52,7 +52,7 @@ class BudgetAlertsJob {
         }
       }
 
-      console.log(`💰 Budget alerts sent: ${alertCount} alerts`);
+      console.log(` Budget alerts sent: ${alertCount} alerts`);
     } catch (error) {
       console.error('❌ Error in budget alerts job:', error);
     }
