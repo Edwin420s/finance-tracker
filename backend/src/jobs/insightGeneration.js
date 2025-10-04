@@ -15,19 +15,19 @@ class InsightGenerationJob {
     });
 
     this.job.start();
-    console.log('🧠 Insight generation job started');
+    console.log(' Insight generation job started');
   }
 
   stop() {
     if (this.job) {
       this.job.stop();
-      console.log('🧠 Insight generation job stopped');
+      console.log(' Insight generation job stopped');
     }
   }
 
   async generateInsightsForAllUsers() {
     try {
-      console.log('🧠 Starting insight generation for all users...');
+      console.log(' Starting insight generation for all users...');
       
       const users = await User.find({});
       let successCount = 0;
@@ -39,14 +39,14 @@ class InsightGenerationJob {
           await insightService.generateAllInsights();
           successCount++;
         } catch (error) {
-          console.error(`❌ Error generating insights for user ${user._id}:`, error);
+          console.error(` Error generating insights for user ${user._id}:`, error);
           errorCount++;
         }
       }
 
-      console.log(`🧠 Insight generation completed: ${successCount} successful, ${errorCount} errors`);
+      console.log(` Insight generation completed: ${successCount} successful, ${errorCount} errors`);
     } catch (error) {
-      console.error('❌ Error in insight generation job:', error);
+      console.error(' Error in insight generation job:', error);
     }
   }
 }
