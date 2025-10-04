@@ -15,19 +15,19 @@ class WeeklySummariesJob {
     });
 
     this.job.start();
-    console.log('📊 Weekly summaries job started');
+    console.log(' Weekly summaries job started');
   }
 
   stop() {
     if (this.job) {
       this.job.stop();
-      console.log('📊 Weekly summaries job stopped');
+      console.log('Weekly summaries job stopped');
     }
   }
 
   async sendWeeklySummaries() {
     try {
-      console.log('📊 Sending weekly summaries...');
+      console.log(' Sending weekly summaries...');
       
       const users = await User.find({
         'preferences.notifications.insights': true
@@ -41,14 +41,14 @@ class WeeklySummariesJob {
           await NotificationService.sendWeeklySummary(user._id);
           successCount++;
         } catch (error) {
-          console.error(`❌ Error sending weekly summary for user ${user._id}:`, error);
+          console.error(` Error sending weekly summary for user ${user._id}:`, error);
           errorCount++;
         }
       }
 
-      console.log(`📊 Weekly summaries sent: ${successCount} successful, ${errorCount} errors`);
+      console.log(` Weekly summaries sent: ${successCount} successful, ${errorCount} errors`);
     } catch (error) {
-      console.error('❌ Error in weekly summaries job:', error);
+      console.error(' Error in weekly summaries job:', error);
     }
   }
 }
